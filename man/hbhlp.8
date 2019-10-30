@@ -1,0 +1,25 @@
+\"
+\"  Copyright (C) 1997-2019 Kimberlite Software <info@kimberlitesoftware.com>
+\"
+.TH hbhlp 8 "01 September 2019" "0.9" "Help Viewer"
+.SH NAME
+\fBhbhlp\fP \- Help file viewer
+.SH SYNOPSIS
+\fBhbhlp\fP <\fIhelp_fn\fP>
+.SH DESCRIPTION
+\fBhbhlp\fP is a utility program for displaying Help files. \fIhelp_fn\fP is a file pathname of the Help file to be displayed.
+
+Help files are text files containing special formatting characters which \fBhbhlp\fP recognizes and uses to set the line indentation and display attributes, such as highlight, underscore, etc..
+
+The build-in HELP command of the command line database client, \fBhbcmd\fP, uses the same code as \fBhbhlp\fP to display the Help file associated with each Keyword.
+
+The Help files for the \fBDB3W\fP project can be found in \fI$(datadir)/doc/db3w\fP where \fI$(datadir)\fP is set by the configuration script \fIconfigure\fP which defaults to \fI/usr/local/share\fP. The subdirectory \fIhbcmd\fP contains Help files used by \fBhbcmd\fP which are accessed by the build-in HELP command. The subdirectory \fIhbapi\fP contains Help files for the HBAPI.
+
+The File Extension ".hlp" can be omitted when specifying \fIhelp_fn\fP. In fact only enough characters to uniquely identify \fIhelp_fn\fP are needed for \fIhelp_fn\fP. The \fBbash\fP auto-complete feature can also be used when typing \fIhelp_fn\fP.
+
+.SH SEE ALSO
+hbcmd(8)
+.SH BUGS
+Report all bugs to DB3W Support <support@db3w.org>.
+.SH AUTHOR
+Charles Chou <cchou@kimberlitesoftware.com>

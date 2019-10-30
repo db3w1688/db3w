@@ -1,0 +1,48 @@
+\"
+\"  Copyright (C) 1997-2019 Kimberlite Software <info@kimberlitesoftware.com>
+\"
+.TH hbcmd 8 "01 September 2019" "0.9" "DB3W Documentation"
+.SH NAME
+\fBhbcmd\fP \- HB*Engine command line client
+.SH SYNOPSIS
+\fBhbcmd\fP [OPTIONS]
+.SH DESCRIPTION
+\fBhbcmd\fP is the executable program for a command line client application for the HB*Engine database server. Once started, \fBhbcmd\fP makes a TCP connection to the server and starts a server session. All native server commands as well as those requiring client specific implementation can be issues at the command prompt, which appears on a TTY screen via the login shell.
+
+.SH OPTIONS
+.TP
+-doc \fIdoc_path\fP
+Specify the directory path to the documentation of HB*Engine Keywords. If omitted the default /usr/local/share/doc/db3w is used. The built-in HELP command searches this \fIdoc_path\fP for the correct .hlp file to display
+
+.TP
+-excl
+Specify that the server session set the EXCLUSIVE flag ON once started. The default setting for this flag is OFF. To turn it on without this startup option a separate SET EXCLUSIVE ON command will need to be given to have all tables open in Exclusive Mode.
+
+.TP
+-host \fIhost\fP
+Specify the database server hostname or its IP address. If omitted, localhost is assumed.
+
+.TP
+-i \fIindex_buffers\fP
+Specify the number of index buffers to allocate for the server session. If omitted, the default of 16 is used.
+
+Each open index requires a separate index buffer to hold the control structures and page data. Maximum number of indexes per table is 16. Only one index can be the Primary Index for a given table. The higher the number of index buffers the higher the number of indexes that can remain open, allowing faster access. If an index is selected to be the Primary and all the existing index buffers are being used by other indexes, which may or may not belong to the Current Table, one of them will need to be closed to allow the index buffer to be used by the newly selected Primary Index.
+
+.TP
+-path \fIpath\fP
+Specify the initial Default Directory path for the server session. If omitted, the Home Directory of the user starting the session is set as the Default Directory.
+	
+.TP
+-port \fIport\fP
+Specify a \fIport\fP to use to connect with the server. If omitted the default port of 1703 is used
+
+.TP 
+-user \fIuser\fP
+Specify the username to connect to the server as. \fIuser\fP must already exist on the server. If the client host is not the same as the server, it is not required that \fIuser\fP exist on the client. If omitted, the effective user ID of the login shell where \fBhbcmd\fP is run will be used to obtain the username as \fIuser\fP and sent to server as part of the sesssion startup call. 
+	
+.SH SEE ALSO
+hbdbe(8), commands(h), functions(h), hbapi(h), dbe_init_session(h)
+.SH BUGS
+Report all bugs to DB3W Support <support@db3w.org>.
+.SH AUTHOR
+Charles Chou <cchou@kimberlitesoftware.com>

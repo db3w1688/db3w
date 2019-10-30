@@ -1,0 +1,291 @@
+\"
+\"  Copyright (C) 1997-2019 Kimberlite Software <info@kimberlitesoftware.com>
+\"
+.TH db3w.cgi 8 "01 September 2019" "0.9" "DB3W Documentation"
+.SH NAME
+\fBdb3w.cgi\fP \- HTTP client gateway for HB*Engine
+.SH SYNOPSIS
+(See INVOCATION Below)
+.SH DESCRIPTION
+\fBdb3w.cgi\fP is a CGI (Common Gateway Interface) program. It interfaces with an HTTP server such as \fBapache\fP to deliver dynamic Web content where components of a Web page are formatted and assembled at run-time.
+.SS INVOCATION
+\fBdb3w.cgi\fP is invoked through a URL (Uniform Resource Locator), commonly known as a Web Address, typed into the address bar of a Web Browser. A static  Web page has a URL which looks like this:
+
+\fIhttp://www.myserver.com/path-to-page/example.html\fP
+
+Where \fIhttp\fP is the protocol and \fIwww.myserver.com\fP is the server hostname where the Web page resides. \fI/path-to-page/\fP is the directory path and \fIexample.html\fP is the file with the HTML formatted content which is sent back to the Web Browser to be displayed.
+
+A CGI URL looks like this:
+
+\fIhttp://www.myserver.com/cgi-bin/example.cgi?var1=value&var2=value...\fP
+
+Where \fIhttp\fP and \fIwww.myserer.com\fP are the protocol and hostname as before. \fI/cgi-bin/example.cgi\fP is the CGI program to execute to retrieve the dynamic content. As part of the HTTP server setup, \fI/cgi-bin/\fP is typically mapped to a directory on the server where CGI programs are located. \fIvar1=value\fP, \fIvar2=value\fP... are HTTP Variables and their assigned values to be passed to the CGI program as its run-time parameters.
+
+A CGI URL can be entered directly into a Web Browser's address bar just like a static page, or it can also be specified as the action URL for a Form Element of an HTML document where the CGI URL is sent to the designated Web server along with the Form Data upon the pressing of the Submit button.
+
+The following is an example of a URL with \fBdb3w.cgi\fP as the target CGI program:
+
+\fIhttp://www.db3w.com/cgi-bin/db3w.cgi/?_domain=demo&_dbpath=/dbase/sample&_prg=test.test&_msghtml=/demo/forms/errmsg.html\fP
+
+.SS RETURN
+Upon return, the CGI program outputs the dynamic content it has assembled and formatted with proper HTML tags to its standard output, which is connected to the parent HTTP server's standard input. The assembled Web page is then sent to the remote Web Browser which invoked the CGI program for display. This completes the HTTP Request-Response cycle.
+
+The task of formatting a Web page dynamically, which is the heart of any CGI program, can be quite challenging. It becomes quite difficult when certain page layout styles are to be maintained. In the early days of the Internet when Web page layouts are simple, Perl Scripts are the most commonly used CGI programs to perform dynamic content generation. Aside from the high execution inefficiencies, the massive amounts of print statements with HTML formatted lines intermingled with code logic to retrieve data make these CGI programs very difficult to maintain.
+
+\fBdb3w.cgi\fP overcomes the page formatting challenge by using special templates called DB3W Forms. A DB3W Form is a regular HTML document with DB3W Tags added. It is created using an HTML document editor just like any other static Web page. In order for those HTML elements in the document where dynamic contents, such as rows of a table, are to occur, special tags, called DB3W Tags, are used to mark the locations in the document using a text editor. When this document is read by \fBdb3w.cgi\fP, it interprets these DB3W Tags and substitudes those Expression Tags with data retrieved from the database server after evaluating the expressions. There are also Control Tags to perform looping and conditional branching functionalities. The looping Control Tags allow multiple iterations of an element. The conditional Control Tags output different parts of the HTML document based on some condition. See \fBDB3W FORMS\fP below for further information.
+
+.SS VARIABLES
+As a CGI program, \fBdb3w.cgi\fP takes its arguments from the run-time environment and the standard input, which is connected to the standard output of the parent HTTP server via pipe. There are many Environment Variables set by the HTTP server when invoking a CGI program. 2 of these variables are of particular interest: \fIQUERY_STRING\fP and \fICONTENT_LENGTH\fP.
+
+QUERY_STRING points to an encoded string of "attribute=value" pairs, each pair separated from the other by an ampersand '&' character. The encoded string is decoded and parsed into variables which are stored in \fBdb3w.cgi\fP's memory. as HTTP Variables. QUERY_STRING is set by the HTTP server using the URL passed in from the Web Browser.
+
+CONTENT_LENGTH is a number string representing the length of the input coming from standard input, sent by the HTTP server. The input data contain the "attribute=value" pairs, each separated from another by an '&' character. These attribute-value pairs are also decoded and parsed into HTTP Variables. Variables obtained via CONTENT_lENGTH and standard input are the result of the POST method when an HTML Form element is submitted.
+
+Once an HB*Engine (\fBhbdbe\fP) server session is started by \fBdb3w.cgi\fP, the HTTP Variables are stored on the server as Memory Variables. They are accessible by server commands in User Defined Procedures (UDPs) to retrieve desired data as well as performing record updates. 
+
+\fBdb3w.cgi\fP uses some of these HTTP Variables as parameters to start the server session. These are:
+
+.TP
+\fB_domain\fP
+This is the session username of the database server session. The server session which handles the requests from the \fBdb3w.cgi\fP client, once started, runs as this user. It is not to be confused with the client username. If omitted, the username as whom the HTTP server is running, as set in the \fIhttp.conf\fP file, will be assumed.
+.TP
+\fB_dbhost\fP
+This is the database server host name or IP address. If omitted, "localhost" is assumed.
+.TP
+\fB_dbpath\fP
+This is the session's Default Path where Table Files are located. If omitted, the Home Directory of The user specified by the _domain variable is used;
+.TP
+\fB_sid\fP
+This is the Session ID variable. If the server session is a new session, i.e., not a continuation of an earlier session, the value of this variable is -1. If the value is not -1, then it is the Session ID of a session which was suspended by a READ STAMP command which causes an input form to be displayed on the Web Browser. That session is to be waken up and continue;
+.TP
+\fB_excl\fP
+Specify whether or not the database server session is to run in Exclusive Mode. If omitted, the session runs in default Shared mode. Sessions running in Exclusive Mode have faster database access time due to no overhead in doing record or file locking but unless the application knows ahead of time that there are no contentions to the tables the open operations have a higher chance of failure;
+.TP
+\fB_timeout\fP
+The number of seconds a suspended session is to wait for a wake-up call before it times out and exits. If omitted, the default timeout is 300 seconds (5 min.).
+.TP
+\fB_passwd\fP
+This is the encrypted password for the \fB_domain\fP user. If the variable is present it is sent to the the server durint the initial sesion startup call.  The server session compared it with the saved encrypted password on the server for that user and session startup fails if the 2 passwords do not match. If omitted the server session starts without further authentication (see \fBNOTES\fP below.)
+.TP
+\fB_prg\fP
+This is a required parameter. The value of this HTTP Variable is a User Defined Procedure (UDP) specifier which points to a UDP located in the Default Path on the database server. The UDP is to be executed after \fBdb3w.cgi\fP establishes a server session with the database server, \fBhbdbe\fP. A UDP specifier consists of a UDP Library name and a UDP name separated by a dot ('.'). Without this parameter \fBdb3w.cgi\fP has no way of opening any database tables nor retrieving any forms for record data to format into an HTML page.
+.TP
+\fB_msghtml\fP
+This variable, if specified, allows a custom formatted HTML file to be used as a template for displaying error messages. During the execution of an application's UDP via \fBdb3w.cgi\fP, any errors encountered will require error messages to be displayed. The value of this variable points to an HTML file containing one special tag. The error messages are to be displayed at the location where this special tag is. Without this parameter, error messages are still displayed on the client's Web Browser but without any formatting. Not all errors caught can be displayed using this mechanism. Start up errors, for instance, can only be displayed without formatting since \fBdb3w.cgi\fP has yet fully initialized. See ERROR HANDLING for more details.
+.TP
+\fB_rpt\fP
+This variable, if specified, directs \fBdb3w.cgi\fP to output the DB3W Form file line by line as it is being processed. The output is saved in the file whose pathname is the value of this variable. The purpose of this variable is for debugging the form files. See DEBUGGING for more details.
+
+.SS DB3W FORMS
+DB3W Forms are HTML templates used by \fBdb3w.cgi\fP to display data in a nicely formatted Web page on a client's Web Browser. The mechanism for doing this begins at the database server end where a SET FORM TO command is issued. This command is part of the User Defined Procedure (UDP) specified via the \fI_prg\fP variable in the URL to invoke \fBdb3w.cgi\fP and is executed by the server when the session starts. The SET FORM TO command simply opens the Form file on the server. It is usually followed immediately by a READ command which actually causes the Form file to be read by \fBdb3w.cgi\fP and turned into an HTML output stream for the HTTP server to send back to the client Web Browser.
+
+The READ command is implemented as a handler routine inside \fBdb3w.cgi\fP for the HB*Engine reverse RPC call USR_READ. When it is called by the UDP code executing on the server, the handler code reads each line in the Form file and looks for DB3W Tags. These are character strings (case insensitive) enclosed in between '{@' and '}'. There are 4 typs of DB3W Tags: Expression Tag, Control Tag, Command Tag and System Tag. Except for the Expression Tag, all DB3W Tags must be on a separate line. They are further described as follows:
+.TP
+\fBExpression Tag\fP
+.RS
+.TP
+{@\fIexpC\fP}
+The Character Expression \fIexpC\fP is evaluated. The tag is then replaced with the resulting data. The resulting data type must be Character or else an INVALID_TYPE error is triggered. This tag replacement action repeats for the same line until the line is void of Expression Tags.
+.RE
+.TP
+\fBControl Tag\fP
+.RS
+.TP
+{@IF \fIexpL\fP}...{@ELSE}...{@ENDIF}
+The Logic Expression \fIexpL\fP is evaluated. The resulting data type must be Logic or else an INVALID_TYPE error is triggered. If the result is True then those lines following the {@IF \fIexp\fP} tag until the {@ELSE} or the {@ENDIF} tag are outputed. Otherwise those lines between the {@ELSE} tag and the {@ENDIF} tag are outputed. If there is no {@ELSE} specified then the output continues after the {@ENDIF} tag.
+.TP
+{@WHILE \fIexpL\fP}...{@ENDWHILE}
+If the Logic Expression \fIexpL\fP evaluates to True, then the lines after the {@WHILE \fIexpL\fP} tag until the {@ENDWHILE} tag are outputed. Otherwise the output continues after the {@ENDWHILE} tag.
+.TP
+{@BEGINCASE}{@CASE \fIexpL1\fP}...{@CASE \fIexpL2\fP}...{@CASE \fIexpLn\fP}...{@OTHERWISE}...{@ENDCASE}
+If the Logic Expression \fIexpL1\fP evaluates to True, then the lines after the {@CASE \fIexpL1\fP} tag until the next {@CASE} or {@OTHERWISE} or {@ENDCASE} tag are outputed. Ditto for {@CASE \fIexpL2\fP}. There may be multiple {@CASE} tags before the {@OTHERWISE} or {@ENDCASE} tag. If no {@CASE} tag whose expression evaluates to True, and the {@OTHERWISE} tag is specified, then the lines after the {@OTHERWISE} tag and the {@ENDCASE} tag are outputed. The output continues after the {@ENDCASE} tag.
+.RE
+.TP
+\fBCommand Tag\fP
+.RS
+.TP
+{@STORE \fIexp\fP TO \fImvar\fP}
+Store the value of expression \fIexp\fP to Memory Variable \fImvar\fP in the current database session;
+.TP
+{@SKIP}
+Skip one record in the Current Table;
+.TP
+{@SELECT \fIalias\fP}
+Change Current Table Context to the one with table \fIalias\fP open.
+.TP
+{@GO \fIexpN\fP}
+Position the Current Record to Record Number \fIexpN\fP in the Current Table.
+.TP
+{@PRINT \fIexp\fP}
+Output the value of \fIexp\fP. This is mainly for debugging purposes as the output will be part of whatever HTML document element it is currently in. The resulting Web page display is likely incomplete due to errors.
+.TP
+{@SHOWVARS}
+Output all of the Memory Variables in the current server session. This is also for debugging purposes and The resulting Web page display is likely incomplete due to errors.
+.RE
+.TP
+\fBSystem Tag\fP
+.RS
+.TP
+{@COOKIE \fIname\fP=\fIvalue\fP; expires=\fItimestr\fP;}
+Send HTTP Cookie \fIname\fP=\fIvalue\fP to the client Web Browser and specify the expiration time \fItimestr\fP. \fItimestr\fP must be in the following format: "DOW, dd-mm-yy hh:mm:ss GMT" where DOW is Day-of-week. For example, "Tuesday, 31-Dec-96 23:59:59 GMT". {@COOKIE} tag must appear before the 1st line of output. If more than 1 Cookie needs to be send then each is listed separately.
+.TP
+{@SENDMAIL TO=\fIrecepient\fP FROM=\fIsender\fP SUBJECT=\fIsubject\fP}
+Set up Email parameters so that the HTML output can be part of an Email. This tag must exist before an {@OUTPUT SENDMAIL} tag.
+.TP
+{@OUTPUT SENDMAIL}
+Direc the HTML output to SENDMAIL previously set up with the {@SENDMAIL} tag. The lines following this tag will be outputed to the mail server running on the host.
+.TP
+{@OUTPUT HTTP}
+Direct the HTML output to the HTTP server. This is the default. If no Email output is needed then this can be omitted. If the {@OUTPUT SENDMAIL} tag is specified, this tag stops the SENDMAIL direction and the lines following this tag are sent to the HTTP server.
+.TP
+{@OUTPUT ALL}
+Direct the HTML output to both SENDMAIL and the HTTP server. {@SENDMAIL} tag must have already been specified.
+.TP
+{@SLEEP \fIname\fP}
+Puts the current database server session to sleep. The argument \fIname\fP is used to open an IPC socket which is used by a command line client such as \fIhbcmd\fP to take over the server session. The primary purpose of this tag is to debug the server session. The take-over client, \fBhbcmd\fP, can examine or change the server session context before issueing a RESUME command to resume the session.
+.TP
+{@DB3W_SESSION}
+Output the sesssion startup parameters as HTTP hidden variables so that a HTML Form element can simply have \fBdb3w.cgi\fP as its action URL with a "post" method. For example:
+.IP
+<form name="test" action="/cgi-bin/db3w.cgi/" method="post">
+.br
+{@DB3W_SESSION}
+
+Where {@DB3W_SESSION} is replaced with the following lines when \fBdb3w.cgi\fP reads the above:
+
+.br
+<INPUT TYPE=HIDDEN NAME="_domain" VALUE="{@_domain}">
+.br
+<INPUT TYPE=HIDDEN NAME="_userspec" VALUE="{@_userspec}">
+.br
+<INPUT TYPE=HIDDEN NAME="_dbhost" VALUE="{@_dbhost}">
+.br
+<INPUT TYPE=HIDDEN NAME="_port" VALUE="{@_port}">
+.br
+<INPUT TYPE=HIDDEN NAME="_dbpath" VALUE="{@_dbpath}">
+.br
+<INPUT TYPE=HIDDEN NAME="_sid" VALUE="{@_sid}">
+.br
+<INPUT TYPE=HIDDEN NAME="\fI_stamp\fP" VALUE="{@_stamp}">
+
+One of the HTTP variables listed above is the Session Stamp, \fI_stamp\fP. When form \fItest\fP is submitted, the value for \fI_stamp\fP is used to resume the suspended session, the session which sent back the above DB3W Form. The Expression Tags for the VALUEs are replaced with the result of evaluating these tags.
+
+Only those applications that require resumption of a session after a Web Form is submitted will need to include this tag. Applications that insist on REST (REpresentational State Transfer) style transition can code the application states into additional application specific Variables and Cookies so that when a new HTTP server session starts it can resume the application at the point where it was left by the previous session by using these Variables and Cookies. The number of variables needed and the added programming complexity in such setup will certainly exceed those using the Session Stamp and the {@DB3W_SESSION} tag.
+
+.SH NOTES
+.SS HTTP SERVER
+\fBdb3w.cgi\fP works closely with the HTTP server therefore a properly configured HTTP server is essential to its operations.
+
+Configuration for the HTTP server, \fBhttpd\fP, is done through its configuration file typically located in:
+
+.RS
+/etc/httpd/conf/httpd.conf
+.RE
+
+One of the first configuration parameters to pay attention to is the User and Group settings, as they determine the file access permissions by the server processes. HTTP server is usually started by the root process at system startup and assumes the identity specified by the User and Group settings once started. Since any CGI programs are spawned by the HTTP server as child processes, they assume the identity of the HTTP server as well. Although \fBdb3w.cgi\fP accesses the DB3W Form files via the connection with the database server, \fBhbdbe\fP, therefore is not affected by the User and Group settings of the HTTP server, other utility CGIs such as \fBviewsource.cgi\fP need access to server files directly. Those files will need to have the ownership or permissions set up to allow the access.
+
+One of the system files that is accessed by \fBapache\fP during startup is
+
+.RS
+/etc/httpd/alias/key3.db
+.RE
+
+Which is owned by user root and group \fIapache\fP. In order for the \fIapache\fP daemon successfully open this file during startup, either the Group setting in the config file needs to be specified as \fIapache\fP, or the user specified in the User setting needs to be a member of group \fIapache\fP.
+
+Directory permissions should default to "all denied" unless specifically granted with the "Directory" directives. For example, if user "demo" has "/home/demo" as Home Directory, there should be the following lines added to "httpd.conf":
+
+.RS
+<Directory "/home/demo">
+.br
+	AllowOverride None
+.br
+	Require all denied
+.br
+</Directory>
+
+.br
+<Directory "/home/demo/db3w">
+.br
+	AllowOverride None
+.br
+	Require all granted
+.br
+</Directory>
+.RE
+
+The site configuration files which sets up the Virtual Hosts that are to be hosted by the HTTP server also need to be correctly set up. They reside under "/etc/httpd/sites-available" directory. The ones that are active, or enabled, have a symbolic link under "/etc/httpd/sites-enabled" pointing to the one under "/etc/httpd/sites-available". As an example, supposed that the HTTP server is to host the Website "www.mydb3w.com". There should be a file under "/etc/httpd/sites-available" with the name "mydb3w.com.conf", with contents similar to the following:
+
+.RS
+<VirtualHost *:80>
+.br
+ServerName www.mydb3w.com
+.br
+ServerAlias mydb3w.com
+.br
+ServerAdmin root@mydb3w.com
+.br
+DocumentRoot /home/db3w/apps/mydb3w
+.br
+ScriptAlias /cgi-bin/ /usr/local/bin/
+.br
+ErrorLog /home/db3w/apps/mydb3w/log/error.log
+.br
+CustomLog /home/db3w/apps/mydb3w/log/requests.log combined
+.br
+</VirtualHost>
+.RE
+
+Where the directories specified by the "DocumentRoot", "ErrorLog" and "CustomLog" parameters must exist and read-writeable by the user or group of the User and Group settings in the config file "httpd.conf".
+
+Each time the HTTP server configuration is changed, the server daemon needs to be restarted. This is usually accomplished with the \fBsystemctl\fP program:
+
+.RS
+sudo systemctl restart httpd
+.RE
+
+.SS AUTHENTICATION
+\fBdb3w.cgi\fP supports user authentication through the use of User ID and Password combination. Applications that require authentication can initiate the authentication request from the server by using a DB3W Form, which displays as a Sign-in page on the user's Web browser. The form is displayed via a SET FORM TO command followed by a READ command as part of the application's User Defined Procedure (UDP) responsible for authentication. Alternatively the Sign-in page can be a regular HTML document with \fBdb3w.cgi\fP as its action URL. 
+
+There are 2 types of User IDs in a DB3W application based on whether that User ID is used to start the application, or to provide selective services within the application. In the 1st case the application is assigned a User ID which exists as a login user to the host OS running the database server, \fBhbdbe\fP. In the initial application startup URL which invokes \fBdb3w.cgi\fP, this ID is contained in an HTTP Variable named "_domain", as described earlier under section \fBINVOCATION-VARIABLES\fP. If authentication is needed, the password provided through the Sign-in page is encrypted and cmpared with the one sent by server. If a match is found the application is allowed to proceed. The encrypted password for that User ID is retrieved through a system call, getpwname() or getspname(), depending on whether a shadow password file is used or not.
+
+The database server must be running in Administrator Mode in order to support this Application Authentication where each application has a separate login User ID in the host OS. The authentication mechanism is implemented inside \fBdb3w,cgi\fP as a handler for the reverse RPC call USR_AUTH, which encrypts the plain text password stored in "_passwd" using the salt string contained in the encrypted password sent by the server as a parameter to the USR_AUTH RPC call. The authentication is successful when the 2 encrypted passwords match.
+
+The second type of user IDs are those used by DB3W Applications to provide selective services to a set of users known only by the application. In this case if authentication is needed the application's UDP can obtain the User ID and Password via a DB3W Form similar to the 1st case except that HTTP Variable named "_passwd" must NOT be present. After the form is submitted, the UDP does a table lookup on that User ID to retrieve the encrypted password for that User ID. The plain text password, can be in any HTTP Variable except "_passwd" so long as it is known by the UDP, is encrypted by calling CRYPT() inside the UDP and the result is then compared with the one retrieved from the database table.
+
+The HTTP Variable "_passwd" cannot be passed in as part of the URL or it will simply be ignored, resulting in a failed authentication. It must be part of the POST variables in a Form Submit. This is to discourage the use of plain text passwords in URLs.
+
+When the database server, \fBhbdbe\fP, is running in User Mode, i.e., it is started by a regular user who is not root, it can only assume the identity of the effective user who started it and will accept connections only from the same user. If the HTTP server is configured to run as that user, \fBdb3w.cgi\fP can connect and run DB3W applications on the server without further authentication. Note that the database client and server may be running on separate hosts. The same username can have different OS uid on different hosts but if the usernames match the connection is allowed and considered authenticated. User Mode is typically used during DB3W application development but if the application manages its own user database and conduct authentication, User Mode can be use to eliminate the extra application authentication. Keep in mind that the HTTP server must run as the same user as the database server in order for User Mode to work.
+
+Once authenticated, an application running as a UDP on the server can call the HASH() function to generate a unique hash string for authenticating subsequent form submits. The hash string can be stored in a Memory Variable and send to the client as a hidden HTTP variable or a Cookie.
+
+.SS ERROR HANDLING
+There are 2 types of errors that can occur when running \fBdb3w.cgi\fP. The 1st type are those errors encountered before a connection is made to the database server and the 2nd are those generated after a database server session is established.
+
+The 1st type of errors are typically caused by incorrect HTTP server configuration or incorrect variale specification in the URL, both generally occur during the early stages of a DB3W application development. If an error occurs before \fBdb3w.cgi\fP is invoked, it is likely due to incorrect HTTP server configuration. The error displayed on the Web browser is usually not very specific and can be misleading. Look for the actual errors in the log file. Please refer to \fBHTTP Server Setup\fP earlier in this section. The errors are saved in the log file specified in the Site Configuration file under the ErrorLog directive. If the errors cannot be saved to the specified log file, then look in the systems log directory, which is typically "/var/log", for a file named "error_log".
+
+Once \fBdb3w.cgi\fP successfully starts it checks for the needed parameters first. These parameters are provided by the parent HTTP server by the way of Envionment Variables. If certain Environment Variables, such as DOCUMENT_ROOT,  don't exist, \fBdb3w.cgi\fP outputs a usage message and exits. The message is displayed on the user's Web browser as a plain HTML page with no formatting.
+
+Another Environment Variable, QUERY_STRING, contains the list of HTTP variables derived from the URL to be parsed and passed to \fBdb3w.cgi\fP. If this Environment Variable is not present, it will also cause \fBdb3w.cgi\fP to output the usage message and exit. Please refer to Secion \fBINVOKATION-VARIABLES\fP for a description of these variables.
+
+If the server session the URL is trying to start is a resumption of a previously suspended session the QUERY_STRING Environment Variable should contain minimum number of variables. All of the startup variables should be part of the POST variables received through standard input. These variables are embedded into a HTML Form using hidden variables. They are generated when the DB3W Form containing the {@DB3W_SESSION} tag is processed by \fBdb3w.cgi\fP. 2 of these variables, "_sid" and "_stamp" must be present or else \fBdb3w.cgi\fP sends an error message and exits. "_sid" is the Session ID of the suspended session. "_stamp" is the Session Stamp which is used to ensure the correct sequencing of form submits.
+
+Once the application's UDP starts, any errors it encounters will cause the database server session to terminate with an error number and some associated session data to be returned to the client, \fBdb3w.cgi\fP. If the "_msghtml" variable is set, the HTML templated pointed to by that variable is used to form a nicely formatted HTML page containing the error messages. If "_msghtml" variable is not specified, or the HTML template cannot be opened, then the error messages are simply displayed without any formatting. Note that the directory path to the "_msghtml" template is rooted in DOCUMENT_ROOT, not the Home Directory of the logged in user on the database server.
+
+.SS DEBUGGING
+Once all the start up issues are taken care of and the application's UDP, specified in the "_prg" variable in the URL, is running on the server, debugging \fBdb3w.cgi\fP is mainly about debugging the DB3W Form being displayed, which is inititiated by the SET FORMAT TO and READ commands in the UDP. Assuming the HTML portion of the DB3W Form contains no formatting errors, the focus of the debugging effort is then on the custom DB3W Tags.
+
+When an error is encountered with one of the DB3W tags during the processing of a DB3W Form, the error messages are sent to the client's Web Browser as part of the HTML output, appearing in whatever element the HTML document is in at the time. The Form processing stops after the error and the page displayed on the browser is likely broken or incomplete, with mixed in error messages. Often the error messages are enough to point to the cause but should this not being enough, the system variable "_rpt" can be used to help the debugging effort.
+
+The "_rpt" variable can be specified in the URL which launched the \fBdb3w.cgi\fP. The value of this variable points to a file which receives the lines of the DB3W Form file as it is being processed, with line numbers added. This is a great way to debug those Contol Tags to determine if the conditions for those tags are what are expected as only those lines within the tags that evaluate to True will be outputed. For the {@WHILE}..{@ENDWHILE} loop, this means repeated lines until the condition evaluates to False.
+
+For Expression Tag errors, with "Undefined Variable" being the most common, it may be necessary to suspend the server session right before the line containing the offensive tag so that we can examine the variables and other database attributes to see if they are what are expected. To do this we need the {@SLEEP} tag.
+
+The {@SLEEP \fIname\fP} tag in a DB3W Form causes the current server session to be suspended. It is typically inserted before the line containing the DB3W tag which generated the error. The required argument \fIname\fP is the identifier a Take-over Client can use to take over the server session. The command line client, \fBhbcmd\fP is used for the take-over and once \fBhbcmd\fP establishes a session with the same server, it issues the TAKEOVER command with \fIname\fP as its argument. The session which was serviing \fBdb3w.cgi\fP to display the DB3W Form is now under the control of \fBhbcmd\fP. Memory Variables can be examined, or even changed. Table Contexts can be switched and database records can be displayed. Once the necessary information regarding the cause of the error is obtained the take-over session can end with a RESUME command, which resumes the original session serving \fBdb3w.cgi\fP, which most likely has been terminated by the HTTP server due to "Gateway Timeout" where the CGI programe takes too long to respond to the request. This "Gateway Timeout" error should have no effect on the debugging effort since it is pointless to continue the HTML display once the formatting is disrupted by the errors messages.
+
+.SH SEE ALSO
+httpd(8), hbdbe(8), hbcmd(8), getpwnam(3), getspnam(3), FORM(h), CRYPT(h)
+
+.SH BUGS
+Report all bugs to DB3W Support <support@db3w.org>.
+.SH AUTHOR
+Charles Chou <cchou@kimberlitesoftware.com>

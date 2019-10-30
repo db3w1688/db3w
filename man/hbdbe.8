@@ -1,0 +1,40 @@
+\"
+\"  Copyright (C) 1997-2019 Kimberlite Software <info@kimberlitesoftware.com>
+\"
+.TH hbdbe 8 "01 September 2019" "0.9" "HB*Engine"
+.SH NAME
+\fBhbdbe\fP \- HB*Engine server process
+.SH SYNOPSIS
+\fBhbdbe\fP [OPTIONS]
+.SH DESCRIPTION
+\fBhbdbe\fP is the executable program for HB*Engine, a database server. It runs as a daemon and listens on port 1703 for TCP connection requests. A database client establishes a server session by sending the initial connection request via the HBAPI dbe_init_session() call. Once the connection is made \fBhbdbe\fP spawns a child process to handle all subsequent requests including the dbe_init_session() call.
+
+Depending on the effective user ID of the process which starts \fBhbdbe\fP, the database server can be running in either Administrator Mode or User Mode. If the effective user ID is root (0), and the -admin option is given, then the server is to start in Administrator Mode with the user specified by the -admin option set to be the Administrator. The server then drops its root privilage and sets the effective user ID to that of the Administrator. It is an error not to provide the -admin option when the effective user ID of the starting process is root.
+
+If the effective user ID of the starting process is non-root then the server is started in User Mode, assuming the same user ID and group ID of the starting process. No -admin option is allowed.
+
+\fBhbdbe\fP running in Administrator Mode can accept connections from any logged-in user whereas in User Mode it only accepts connections from the same user who started the server program.
+
+When \fBhbdbe\fP is running in Administrator mode, and the client requests the server session to start as a regular user, then that user is authenticated as part of the initial login call, dbe_init_sesion(). The authentication request is sent by the server to the client via a USR reverse RPC call. The client's RPC handler code then prompts the user for a password which is then encrypted and sent back to the server. The authentication step is completed with a comparison of the encrypted password and the saved encrypted password for that user. If the 2 passwords match the session is started. The new server session sets its effective user ID and group ID to the authenticated user. It then issues a "chroot" system call to set the Root Path of the server session to the Home Directory of the authenticated user.
+
+No client authentication is required when \fBhbdbe\fP is running in User Mode since only clients with the same effective user ID as the server are allowed to connect.
+
+.SH OPTIONS
+.TP
+.TP
+-log \fIlogfn\fP
+Specify that the session should output its logs to file \fIlogfn\fP. New log messages are appended to \fIlogfn\fP.
+	
+-port \fIport\fP
+Specify a different \fIport\fP to listen for connections. By default \fBhbdbe\fP listens for connections on port 1703.
+	
+.TP 
+-admin \fIuser\fP
+Specify the Administrator user name \fIuser\fP. \fIuser\fP must already exist on the server with a user ID and group ID and a Home Directory. Must be root to set this option.
+	
+.SH SEE ALSO
+hbcmd(8), hbapi(h), dbe_init_session(h)
+.SH BUGS
+Report all bugs to DB3W Support <support@db3w.org>.
+.SH AUTHOR
+Charles Chou <cchou@kimberlitesoftware.com>
