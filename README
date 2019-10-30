@@ -1,0 +1,141 @@
+ ****************************************************************************
+ *  DB3W -- A database application development and deployment platform
+ *  HB*Engine -- A 64-bit dBASE/xBase compatible database server
+ *  HB*Commander -- A command line HB*Engine client
+ *  DB3W.CGI -- A Web application delivery client for HB*Engine
+ *
+ *  Copyright (C) 1997-2019 Kimberlite Software <info@kimberlitesoftware.com>
+ ****************************************************************************
+
+To do a build you will need to set up autoconf first:
+
+	aclocal
+	autoheader
+	automake --add-missing
+	autoconf
+
+If all goes well you should see a file named "configure" in
+the top directory. Do the following to build and install:
+
+	./configure
+	make
+	sudo make install
+
+This will install the package under the default top level directory,
+"/usr/local", where the executables are under "/usr/local/bin" and
+documentations are under "/usr/local/share/doc", etc. If you rather 
+install the package under a different existing directory, for example 
+"/home/db3w", add the "-prefix=" option to configure:
+
+	./configure -prefix=/home/db3w
+	
+If you already have write permissions to this directory then the install
+does not need to be done with "sudo". However, to view the man pages for 
+the executables, "hbdbe", "hbcmd", "hbhlp" and "db3w.cgi" you will need
+to add the following line to "/etc/man_db.conf":
+
+	MANPATH_MAP     /home/db3w/bin          /home/db3w/share/man
+
+***********************************************************************
+
+After the install is finished, there are 2 additional tarballs which are 
+part of the install and need to be extracted to make the installation 
+complete:
+
+1. Go to "$prefix$/share/doc/db3w" and untar the file "hbdocs.tgz",
+   where $prefix$ is the top level install directory. This will install 
+   the documentation for "hbcmd" and "hbapi" in this directory (you may 
+   need to use "sudo" for this if you took the default and do not have
+   write permission to "/usr/local");
+
+2. Untar the file "$prefix$/share/examples/db3w/db3w.examples.tgz" to your 
+   home directory. This will create a db3w subdirctory containing all 
+   the example database and procedure files.
+
+Assuming "$prefix$/bin" is in your PATH, at the bash "$" prompt simply do:
+
+	$ hbdbe
+
+This starts the database server, HB*Engine, in User Mode (running as you,
+the login user) where it only servers clients running as the same user 
+as the server. The command line client, HB*Commander, is started by typing:
+
+	$ hbcmd
+
+You can run this in any directory but once it starts, it will set the 
+Default Path to your home directory. After the Sign-on messages, you should 
+be at HB*Commander's "1>" prompt, waiting for a command (The "1" stands for 
+"Table Context #1".) Note that in this instance, the server and client are 
+both running on the same host and as the same user.
+
+The directory which contains the example database files is "db3w/dbase" under
+your home directory. At the "1>" prompt, type:
+
+	1>cd db3w/dbase
+	1>dir
+
+You should see a listing of the files in that directory. There should be a 
+database table file named "company.tbl" in that list. Try:
+
+	1>use company
+	company>display structure
+
+If you see a table structure displayed, you are ready to enter additional 
+commands to explore HB*Engine's functionalities. To see a list of commands, 
+do:
+
+	1>help commands
+
+To see a list of functions, do:
+
+	1>help functions
+
+To see the documentation on a keyword, such as the command "USE", do:
+
+	1>help use
+
+Note that the help files extracted in the addtional installation step above 
+with file extention ".hlp" are located under "$prefix$/share/doc/db3w"
+and the ones under "hbcmd" can be viewed with the "HELP" command while  
+HB*Commander is running. The ones under "hbapi" are viewd with the "hbhlp" 
+tool at the bash prompt. For example:
+
+	$ hbhlp hbapi/dbe_init_session
+	
+This will display the documentation for the HBAPI call "dbe_init_session()".
+
+******************************************************************************
+
+To get "db3w.cgi" running you must set up the HTTP server as documented in
+db3w.cgi(8), which can be viewed, after doing the build and install, with the
+"man" command:
+
+	man db3w.cgi
+
+Essentially the HTTP server, "httpd", must be configured to run as the login
+user (for the purpose of testing the examples) which is the same user "hbdbe"
+is running as. The site config file must be set up with ScriptAlias 
+"/cgi-bin/" pointing to "$prefix$/bin/" where "db3w.cgi" resides. Once 
+everything is set up and "httpd" is successfully started, simply point your 
+browser to the server's IP address and you should see "index.html" displayed 
+which has 2 links on it. The first starts a table browse demo and the 2nd 
+starts a registration demo.
+
+*******************************************************************************
+
+To run the database server, "hbdbe", in Administrator Mode, you must start
+"hbdbe" as root and designate a user as the Administrator. For example:
+
+	hbdbe -user db3w
+	
+Where "db3w" exists as a user on the server host OS and will be the
+Administrator for the users, or apps, created by the User Administration
+app. Additional documentation can be viewed with the "man" command:
+
+	man hbdbe
+
+To report issues or bugs, send email to:
+
+	support@kimberlitesoftware.com
+
+
